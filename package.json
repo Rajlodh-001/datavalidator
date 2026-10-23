@@ -1,0 +1,17 @@
+{
+  "name": "transaction-validator-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root runner scripts for Maker-Checker Transaction Validator",
+  "scripts": {
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f postgres",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:test": "npm --prefix backend test",
+    "backend:db:init": "npm --prefix backend run db:init",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build"
+  }
+}
