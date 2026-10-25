@@ -62,4 +62,9 @@ export const api = {
 
   // Get sample CSV URL
   getSampleCsvUrl: () => `${API_BASE}/sample-csv`,
+
+  // Get dynamic generated CSV URL
+  getGenerateCsvUrl: ({ rows = 10, invalid = 0, duplicates = 0 } = {}) =>
+    `${API_BASE}/generate-csv?rows=${rows}&invalid=${invalid}&duplicates=${duplicates}`,
 };
+

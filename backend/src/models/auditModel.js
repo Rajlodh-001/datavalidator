@@ -1,10 +1,7 @@
 const { query } = require('../config/db');
 
-/**
- * Audit Log Data Access Layer
- */
 const auditModel = {
-  // Fetch all audit logs in reverse chronological order
+  // Grab all logs, newest on top
   getAll: async () => {
     const result = await query(
       `SELECT * FROM audit_logs ORDER BY timestamp DESC`
@@ -12,7 +9,7 @@ const auditModel = {
     return result.rows;
   },
 
-  // Insert a single audit record
+  // Save audit entry (supports passing existing transaction client)
   create: async (action, details, client = null) => {
     const sql = `INSERT INTO audit_logs (action, details) VALUES ($1, $2) RETURNING *`;
     const params = [action, details];

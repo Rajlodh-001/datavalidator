@@ -1,8 +1,6 @@
 const auditModel = require('../models/auditModel');
 
-/**
- * GET /audit-logs - Retrieve all audit trail logs
- */
+// Fetch the audit log timeline
 const getAuditLogs = async (req, res) => {
   try {
     const logs = await auditModel.getAll();

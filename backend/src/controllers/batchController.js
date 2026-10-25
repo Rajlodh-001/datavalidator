@@ -1,8 +1,6 @@
 const batchModel = require('../models/batchModel');
 
-/**
- * GET /batches - List all batches in descending order
- */
+// Fetch list of all uploaded batches
 const getBatches = async (req, res) => {
   try {
     const batches = await batchModel.getAll();
@@ -13,9 +11,7 @@ const getBatches = async (req, res) => {
   }
 };
 
-/**
- * GET /batches/:id - Get batch info and its transactions
- */
+// Fetch single batch details along with all its transaction records
 const getBatchById = async (req, res) => {
   const { id } = req.params;
   try {
@@ -36,9 +32,7 @@ const getBatchById = async (req, res) => {
   }
 };
 
-/**
- * POST /batches/:id/approve - Approve batch and authorize all pending transactions
- */
+// Checker action: approve the batch and authorize all pending rows
 const approveBatch = async (req, res) => {
   const { id } = req.params;
 

@@ -1,7 +1,4 @@
-/**
- * Pure validator for transaction rows from CSV
- */
-
+// Row-by-row validation for transaction CSVs
 const validateTransactionRows = (rawRows, existingDbTxIds = new Set()) => {
   const seenInFile = new Set();
   const evaluatedRows = [];
@@ -12,7 +9,7 @@ const validateTransactionRows = (rawRows, existingDbTxIds = new Set()) => {
     const row = rawRows[i];
     const rowNumber = i + 1;
 
-    // Normalize and trim input fields
+    // Clean whitespace
     const txId = (row.transaction_id || '').trim();
     const customerName = (row.customer_name || '').trim();
     const accountNumber = (row.account_number || '').trim();
@@ -20,19 +17,19 @@ const validateTransactionRows = (rawRows, existingDbTxIds = new Set()) => {
 
     const errors = [];
 
-    // Rule 1: All fields are mandatory
+    // All fields are mandatory
     if (!txId) errors.push('transaction_id is required');
     if (!customerName) errors.push('customer_name is required');
     if (!accountNumber) errors.push('account_number is required');
     if (!rawAmount) errors.push('amount is required');
 
-    // Rule 2: Amount must be numeric and > 0
+    // Amount must be positive number
     const parsedAmount = parseFloat(rawAmount);
     if (rawAmount && (isNaN(parsedAmount) || parsedAmount <= 0)) {
       errors.push('amount must be a valid number greater than 0');
     }
 
-    // Rule 3: Uniqueness in CSV file & Uniqueness in Database
+    // Check duplicate ID inside this upload and against the DB
     if (txId) {
       if (seenInFile.has(txId)) {
         errors.push(`Duplicate transaction_id "${txId}" in CSV file`);

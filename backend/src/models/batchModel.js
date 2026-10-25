@@ -1,11 +1,8 @@
 const { pool, query } = require('../config/db');
 const auditModel = require('./auditModel');
 
-/**
- * Batch & Transactions Data Access Layer
- */
 const batchModel = {
-  // Retrieve all existing transaction IDs with PENDING or AUTHORIZED status
+  // Grab active IDs so we don't allow duplicate transactions across files
   getActiveTransactionIds: async () => {
     const res = await query(
       `SELECT transaction_id FROM transactions WHERE status IN ('PENDING', 'AUTHORIZED')`
@@ -13,7 +10,7 @@ const batchModel = {
     return new Set(res.rows.map((r) => (r.transaction_id || '').trim()));
   },
 
-  // Retrieve all batches
+  // Get list of batches, newest first
   getAll: async () => {
     const res = await query(
       `SELECT * FROM batches ORDER BY created_at DESC`
@@ -21,13 +18,13 @@ const batchModel = {
     return res.rows;
   },
 
-  // Retrieve batch by ID
+  // Lookup batch by its ID
   getById: async (id) => {
     const res = await query(`SELECT * FROM batches WHERE id = $1`, [id]);
     return res.rows[0] || null;
   },
 
-  // Retrieve transactions for a specific batch
+  // All transactions belonging to a given batch
   getTransactionsByBatchId: async (batchId) => {
     const res = await query(
       `SELECT * FROM transactions WHERE batch_id = $1 ORDER BY id ASC`,
@@ -36,7 +33,7 @@ const batchModel = {
     return res.rows;
   },
 
-  // Atomically create batch, transactions, and audit log
+  // Wrap batch header, all rows, and the audit log in a single transaction
   createWithTransactions: async ({
     filename,
     totalCount,
@@ -49,7 +46,7 @@ const batchModel = {
     try {
       await client.query('BEGIN');
 
-      // 1. Insert Batch record
+      // 1. Save the batch header
       const batchRes = await client.query(
         `INSERT INTO batches (filename, total_records, valid_records, invalid_records, status)
          VALUES ($1, $2, $3, $4, $5)
@@ -58,7 +55,7 @@ const batchModel = {
       );
       const batch = batchRes.rows[0];
 
-      // 2. Insert Transactions
+      // 2. Insert each row with its evaluated validation status
       for (const row of evaluatedRows) {
         await client.query(
           `INSERT INTO transactions (batch_id, transaction_id, customer_name, account_number, amount, status, error_reason)
@@ -75,7 +72,7 @@ const batchModel = {
         );
       }
 
-      // 3. Insert Audit Log
+      // 3. Record upload action in audit history
       const auditDetails = `Batch #${batch.id} ("${batch.filename}") uploaded by Maker. Total: ${totalCount}, Valid: ${validCount}, Invalid: ${invalidCount}.`;
       await auditModel.create('BATCH_UPLOADED', auditDetails, client);
 
@@ -89,7 +86,7 @@ const batchModel = {
     }
   },
 
-  // Atomically approve batch, update pending transactions, and log audit event
+  // Checker approval: update status to AUTHORIZED and log audit
   approve: async (batchId) => {
     const client = await pool.connect();
     try {
@@ -110,7 +107,7 @@ const batchModel = {
 
       await client.query('BEGIN');
 
-      // Update transactions
+      // Flip all pending records in this batch to authorized
       const txRes = await client.query(
         `UPDATE transactions 
          SET status = 'AUTHORIZED' 
@@ -119,7 +116,7 @@ const batchModel = {
         [batchId]
       );
 
-      // Update batch
+      // Mark batch header authorized
       const updatedBatchRes = await client.query(
         `UPDATE batches 
          SET status = 'AUTHORIZED' 
@@ -128,7 +125,7 @@ const batchModel = {
         [batchId]
       );
 
-      // Log in audit table
+      // Keep audit record of who/what approved it
       const auditDetails = `Batch #${batchId} ("${batch.filename}") approved by Checker. ${txRes.rowCount} transactions transitioned to AUTHORIZED.`;
       await auditModel.create('BATCH_APPROVED', auditDetails, client);
 
